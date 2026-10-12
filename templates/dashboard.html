@@ -1,0 +1,75 @@
+{% extends "layout_app.html" %}
+{% block title %}Services{% endblock %}
+{% block content %}
+
+<section class="welcome">
+  <div>
+    <h1>Namaste, {{ g.user['full_name'].split()[0] }}</h1>
+    <p class="lede">Tell the municipal office about a problem or ask for new infrastructure in your ward. Every request you send shows up here with its status.</p>
+  </div>
+  <dl class="facts">
+    <div><dt>Your ward</dt><dd>{{ g.user['ward'] }}</dd></div>
+    <div><dt>Requests sent</dt><dd>{{ total }}</dd></div>
+    <div><dt>Still open</dt><dd>{{ open_count }}</dd></div>
+  </dl>
+</section>
+
+<section aria-labelledby="choose">
+  <h2 id="choose">What do you need help with?</h2>
+  <div class="services">
+    <a class="service service-power" href="{{ url_for('electricity') }}">
+      <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <rect x="30" y="8" width="4" height="52"/><rect x="14" y="16" width="36" height="3"/><rect x="20" y="28" width="24" height="3"/>
+        <path d="M0 26 Q10 34 16 16 M48 16 Q56 34 64 26" fill="none" stroke-width="1.5"/>
+      </svg>
+      <h3>Electricity poles</h3>
+      <p>Ask for a new pole, or report one that is leaning, damaged or carrying loose wires.</p>
+      <span class="service-cta">Start an electricity request</span>
+    </a>
+    <a class="service service-water" href="{{ url_for('water') }}">
+      <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <path d="M4 22 H40 V34 H60 M40 34 V46" fill="none" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M46 52 q4 6 8 0 q-4 -4 -8 0z"/>
+      </svg>
+      <h3>Water pipes</h3>
+      <p>Ask for a new pipe line, or report a leak, a burst pipe or low water pressure.</p>
+      <span class="service-cta">Start a water request</span>
+    </a>
+  </div>
+</section>
+
+<section class="two-col">
+  <div aria-labelledby="mine">
+    <h2 id="mine">Your recent requests</h2>
+    {% if complaints %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Service</th><th scope="col">Issue</th><th scope="col">Location</th><th scope="col">Sent</th><th scope="col">Status</th></tr></thead>
+        <tbody>
+        {% for c in complaints %}
+          <tr>
+            <td>{{ c['service']|capitalize }}</td>
+            <td>{{ request_types.get(c['request_type'], c['request_type']) }}</td>
+            <td>{{ c['address'] }}</td>
+            <td>{{ c['created_at'][:10] }}</td>
+            <td><span class="status">{{ c['status'] }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="empty">You have not sent any requests yet. Choose a service above to send your first one.</p>
+    {% endif %}
+  </div>
+
+  <div aria-labelledby="how">
+    <h2 id="how">How a request works</h2>
+    <ol class="steps">
+      <li><strong>Fill in the form.</strong> Say what is wrong and add a photo if you have one.</li>
+      <li><strong>Mark the spot on the map.</strong> Crews find the exact pole or pipe from your pin.</li>
+      <li><strong>Follow the status.</strong> The municipal office updates it here as work is planned and finished.</li>
+    </ol>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "layout_auth.html" %}
+{% block title %}Create account{% endblock %}
+{% block auth_content %}
+<h1>Create a citizen account</h1>
+<p class="lede">Your citizenship number lets the municipal office confirm that requests come from residents.</p>
+
+{% macro field(name, label, type="text", autocomplete="off", hint="") %}
+  <div class="field {% if errors.get(name) %}has-error{% endif %}">
+    <label for="{{ name }}">{{ label }}</label>
+    <input id="{{ name }}" name="{{ name }}" type="{{ type }}" autocomplete="{{ autocomplete }}"
+           {% if type != 'password' %}value="{{ form.get(name, '') }}"{% endif %}
+           {% if errors.get(name) %}aria-invalid="true" aria-describedby="{{ name }}-msg"{% endif %} required>
+    {% if hint and not errors.get(name) %}<p class="hint">{{ hint }}</p>{% endif %}
+    {% if errors.get(name) %}<p class="field-error" id="{{ name }}-msg">{{ errors[name] }}</p>{% endif %}
+  </div>
+{% endmacro %}
+
+<form method="post" novalidate>
+  {{ field("full_name", "Full name", autocomplete="name") }}
+  {{ field("citizenship_no", "Citizenship certificate number") }}
+  <div class="row-2">
+    {{ field("phone", "Phone number", "tel", "tel") }}
+    {{ field("ward", "Ward number", "number") }}
+  </div>
+  {{ field("email", "Email address", "email", "email") }}
+  <div class="row-2">
+    {{ field("password", "Password", "password", "new-password", "At least 8 characters.") }}
+    {{ field("confirm", "Confirm password", "password", "new-password") }}
+  </div>
+  <button class="btn btn-primary btn-block" type="submit">Create account</button>
+</form>
+
+<p class="switch">Already registered? <a href="{{ url_for('login') }}">Log in</a></p>
+{% endblock %}

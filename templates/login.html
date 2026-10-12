@@ -1,0 +1,22 @@
+{% extends "layout_auth.html" %}
+{% block title %}Log in{% endblock %}
+{% block auth_content %}
+<h1>Log in to your account</h1>
+<p class="lede">Registered citizens can send electricity and water requests to the municipal office.</p>
+
+{% if error %}<p class="notice notice-error" role="alert">{{ error }}</p>{% endif %}
+
+<form method="post" novalidate>
+  <div class="field">
+    <label for="email">Email address</label>
+    <input id="email" name="email" type="email" autocomplete="email" value="{{ email }}" required autofocus>
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+  </div>
+  <button class="btn btn-primary btn-block" type="submit">Log in</button>
+</form>
+
+<p class="switch">New here? <a href="{{ url_for('register') }}">Create a citizen account</a></p>
+{% endblock %}

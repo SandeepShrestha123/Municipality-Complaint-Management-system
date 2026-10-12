@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand brand-light" href="{{ url_for('dashboard') }}">Nagarsewa</a>
+    <nav class="topnav" aria-label="Main">
+      <a href="{{ url_for('dashboard') }}">Services</a>
+      <span class="topnav-user">{{ g.user['full_name'] }}</span>
+      <form method="post" action="{{ url_for('logout') }}">
+        <button class="link-btn" type="submit">Log out</button>
+      </form>
+    </nav>
+  </div>
+</header>
+<main class="page">
+  {% include "_flash.html" %}
+  {% block content %}{% endblock %}
+</main>
+{% endblock %}

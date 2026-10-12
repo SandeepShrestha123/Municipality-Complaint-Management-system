@@ -1,0 +1,101 @@
+{% extends "layout_app.html" %}
+{% block title %}Electricity pole request{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('dashboard') }}">Back to services</a>
+<h1>Electricity pole request</h1>
+<p class="lede">Tell us what is needed and where. The municipal office will review it and update the status on your services page.</p>
+
+{% if errors %}
+<p class="notice notice-error" role="alert">Check the highlighted fields below and send the request again.</p>
+{% endif %}
+
+<form class="request-form" method="post" enctype="multipart/form-data" novalidate>
+
+  <fieldset class="block {% if errors.request_type %}has-error{% endif %}">
+    <legend>What do you need?</legend>
+    <div class="choices">
+      {% for key, label in request_types.items() %}
+      <label class="choice">
+        <input type="radio" name="request_type" value="{{ key }}" {% if form.get('request_type') == key %}checked{% endif %} required>
+        <span>{{ label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if errors.request_type %}<p class="field-error">{{ errors.request_type }}</p>{% endif %}
+  </fieldset>
+
+  <fieldset class="block {% if errors.location or errors.address %}has-error{% endif %}">
+    <legend>Where is the pole or the place for the new pole?</legend>
+
+    <div class="location-actions">
+      <button type="button" class="btn btn-primary" id="openMap">Select location on map</button>
+      <button type="button" class="btn btn-quiet" id="useMyLocation">Use my current location</button>
+    </div>
+    <p class="pin-state" id="pinState" aria-live="polite">
+      {% if form.get('latitude') %}Location selected.{% else %}No location selected yet.{% endif %}
+    </p>
+    {% if errors.location %}<p class="field-error">{{ errors.location }}</p>{% endif %}
+
+    <input type="hidden" name="latitude" id="latitude" value="{{ form.get('latitude', '') }}">
+    <input type="hidden" name="longitude" id="longitude" value="{{ form.get('longitude', '') }}">
+
+    <div class="field {% if errors.address %}has-error{% endif %}">
+      <label for="address">Address or area name</label>
+      <input id="address" name="address" type="text" value="{{ form.get('address', '') }}" placeholder="Filled in from the map. You can edit it.">
+      {% if errors.address %}<p class="field-error">{{ errors.address }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label for="landmark">Nearby landmark <span class="optional">(optional)</span></label>
+      <input id="landmark" name="landmark" type="text" value="{{ form.get('landmark', '') }}" placeholder="For example: opposite the temple, next to the school gate">
+    </div>
+  </fieldset>
+
+  <fieldset class="block">
+    <legend>Details</legend>
+    <div class="field {% if errors.description %}has-error{% endif %}">
+      <label for="description">Describe the problem or the request</label>
+      <textarea id="description" name="description" rows="5" required>{{ form.get('description', '') }}</textarea>
+      {% if errors.description %}<p class="field-error">{{ errors.description }}</p>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="urgency">How urgent is it?</label>
+      <select id="urgency" name="urgency">
+        {% for key, label in urgency_levels.items() %}
+        <option value="{{ key }}" {% if form.get('urgency', 'normal') == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <p class="hint">If a wire is down or someone could be hurt, keep people away from the area before you send this request.</p>
+    </div>
+
+    <div class="field {% if errors.photo %}has-error{% endif %}">
+      <label for="photo">Photo <span class="optional">(optional, up to 6 MB)</span></label>
+      <input id="photo" name="photo" type="file" accept="image/png,image/jpeg,image/webp">
+      {% if errors.photo %}<p class="field-error">{{ errors.photo }}</p>{% endif %}
+    </div>
+  </fieldset>
+
+  <div class="form-foot">
+    <p class="hint">The office will contact you on {{ g.user['phone'] }} if it needs more information.</p>
+    <button class="btn btn-primary" type="submit">Send request</button>
+  </div>
+</form>
+
+<dialog id="mapDialog" aria-labelledby="mapTitle">
+  <div class="dialog-head">
+    <h2 id="mapTitle">Select the location</h2>
+    <button type="button" class="link-btn" id="cancelMap">Close</button>
+  </div>
+  <p class="dialog-help">Click the exact spot on the map to place a pin. Zoom in for accuracy.</p>
+  <iframe id="mapFrame" title="OpenStreetMap, click to place a pin"></iframe>
+  <div class="dialog-foot">
+    <p id="pickedText" class="hint">Nothing selected yet.</p>
+    <button type="button" class="btn btn-primary" id="confirmMap" disabled>Confirm location</button>
+  </div>
+</dialog>
+
+<script>
+  window.MAP_URL = "{{ url_for('map_view') }}";
+</script>
+<script src="{{ url_for('static', filename='electricity.js') }}"></script>
+{% endblock %}

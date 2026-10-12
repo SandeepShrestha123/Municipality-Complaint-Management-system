@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block bodyclass %}auth{% endblock %}
+{% block body %}
+<main class="auth-grid">
+  <aside class="auth-art" aria-hidden="true">
+    <div class="auth-art-text">
+      <p class="brand brand-light">Nagarsewa</p>
+      <p class="auth-art-line">Poles, wires and pipes are the municipality's job. Telling us about them should be yours in two minutes.</p>
+    </div>
+    <svg viewBox="0 0 420 460" class="pole-art" focusable="false">
+      <line x1="0" y1="420" x2="420" y2="420" class="s-ground"/>
+      <rect x="203" y="70" width="14" height="350" class="f-pole"/>
+      <rect x="120" y="96" width="180" height="9" class="f-pole"/>
+      <rect x="150" y="150" width="120" height="7" class="f-pole"/>
+      <g class="f-ins">
+        <rect x="128" y="82" width="6" height="14"/><rect x="206" y="62" width="8" height="12"/><rect x="286" y="82" width="6" height="14"/>
+        <rect x="158" y="137" width="6" height="13"/><rect x="256" y="137" width="6" height="13"/>
+      </g>
+      <g class="s-wire">
+        <path d="M0 120 Q64 150 131 82"/>
+        <path d="M131 82 Q210 120 289 82"/>
+        <path d="M289 82 Q356 150 420 118"/>
+        <path d="M0 176 Q80 206 161 137"/>
+        <path d="M161 137 Q210 160 259 137"/>
+        <path d="M259 137 Q340 206 420 170"/>
+        <path d="M210 62 Q300 20 420 40"/>
+        <path d="M210 62 Q120 20 0 44"/>
+      </g>
+      <g class="s-pipe">
+        <path d="M0 440 H140 V452 H420"/>
+      </g>
+    </svg>
+  </aside>
+  <section class="auth-panel">
+    <div class="auth-card">
+      <p class="brand brand-dark">Nagarsewa</p>
+      {% include "_flash.html" %}
+      {% block auth_content %}{% endblock %}
+    </div>
+  </section>
+</main>
+{% endblock %}
