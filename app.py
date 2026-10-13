@@ -26,6 +26,15 @@ REQUEST_TYPES = {
     "wire_problem": "Wires are hanging, loose or sparking",
     "other": "Another pole problem",
 }
+WATER_REQUEST_TYPES = {
+    "new_pipe": "Install a new water pipe line",
+    "leak": "Water pipe is leaking",
+    "burst_pipe": "Burst or broken pipe",
+    "low_pressure": "Low water pressure",
+    "no_supply": "No water supply",
+    "contaminated": "Dirty or contaminated water",
+    "other_water": "Another water problem",
+}
 URGENCY_LEVELS = {
     "normal": "Normal",
     "urgent": "Urgent",
@@ -220,7 +229,7 @@ def dashboard():
         complaints=rows,
         total=counts["total"] or 0,
         open_count=counts["open_count"] or 0,
-        request_types=REQUEST_TYPES,
+        request_types={**REQUEST_TYPES, **WATER_REQUEST_TYPES},
     )
 
 
@@ -293,11 +302,72 @@ def electricity():
 
 
 # -------------------------------------------------------------------- water
-@app.route("/water")
+@app.route("/water", methods=["GET", "POST"])
 @login_required
 def water():
-    # Placeholder: your teammate's water pipe form plugs in here.
-    return render_template("water.html")
+    errors = {}
+    form = request.form
+
+    if request.method == "POST":
+        request_type = form.get("request_type", "")
+        description = form.get("description", "").strip()
+        urgency = form.get("urgency", "normal")
+        address = form.get("address", "").strip()
+        landmark = form.get("landmark", "").strip()
+        lat_raw, lng_raw = form.get("latitude", ""), form.get("longitude", "")
+
+        if request_type not in WATER_REQUEST_TYPES:
+            errors["request_type"] = "Choose the water problem or service you need."
+        if urgency not in URGENCY_LEVELS:
+            urgency = "normal"
+        if len(description) < 10:
+            errors["description"] = "Describe the problem in at least 10 characters."
+
+        latitude = longitude = None
+        try:
+            latitude, longitude = float(lat_raw), float(lng_raw)
+            if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+                raise ValueError
+        except ValueError:
+            errors["location"] = "Select the location on the map."
+
+        if not address and "location" not in errors:
+            errors["address"] = "Add an address or the name of the area."
+
+        photo_name = None
+        photo = request.files.get("photo")
+        if photo and photo.filename:
+            ext = photo.filename.rsplit(".", 1)[-1].lower()
+            if ext not in ALLOWED_PHOTOS:
+                errors["photo"] = "Upload a PNG, JPG or WEBP image."
+            else:
+                photo_name = f"{uuid.uuid4().hex}_{secure_filename(photo.filename)}"
+
+        if not errors:
+            if photo_name:
+                photo.save(os.path.join(UPLOAD_DIR, photo_name))
+            db = get_db()
+            db.execute(
+                "INSERT INTO complaints (user_id, service, request_type,"
+                " description, urgency, address, landmark, latitude, longitude,"
+                " photo, status, created_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (g.user["id"], "water", request_type, description, urgency,
+                 address, landmark, latitude, longitude, photo_name, "Submitted",
+                 datetime.now().isoformat(timespec="seconds")),
+            )
+            db.commit()
+            flash("Your water service request has been sent to the municipal office.",
+                  "success")
+            return redirect(url_for("dashboard"))
+
+    return render_template(
+        "water.html",
+        errors=errors,
+        form=form,
+        request_types=WATER_REQUEST_TYPES,
+        urgency_levels=URGENCY_LEVELS,
+    )
 
 
 # ---------------------------------------------------------------------- map

@@ -1,7 +1,98 @@
 {% extends "layout_app.html" %}
-{% block title %}Water pipes{% endblock %}
+{% block title %}Water service request{% endblock %}
 {% block content %}
 <a class="back" href="{{ url_for('dashboard') }}">Back to services</a>
 <h1>Water pipe request</h1>
-<p class="empty">The water pipe form is not available yet.</p>
+<p class="lede">Report a water supply problem or request a new pipe line. Add the location so the municipal team can find it and follow up.</p>
+
+{% if errors %}
+<p class="notice notice-error" role="alert">Check the highlighted fields below and send the request again.</p>
+{% endif %}
+
+<form class="request-form" method="post" enctype="multipart/form-data" novalidate>
+  <fieldset class="block {% if errors.request_type %}has-error{% endif %}">
+    <legend>What water service do you need?</legend>
+    <div class="choices">
+      {% for key, label in request_types.items() %}
+      <label class="choice">
+        <input type="radio" name="request_type" value="{{ key }}" {% if form.get('request_type') == key %}checked{% endif %} required>
+        <span>{{ label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if errors.request_type %}<p class="field-error">{{ errors.request_type }}</p>{% endif %}
+  </fieldset>
+
+  <fieldset class="block {% if errors.location or errors.address %}has-error{% endif %}">
+    <legend>Where is the pipe or water supply problem?</legend>
+    <div class="location-actions">
+      <button type="button" class="btn btn-primary" id="openMap">Select location on map</button>
+      <button type="button" class="btn btn-quiet" id="useMyLocation">Use my current location</button>
+    </div>
+    <p class="pin-state" id="pinState" aria-live="polite">
+      {% if form.get('latitude') and form.get('longitude') %}Location selected.{% else %}No location selected yet.{% endif %}
+    </p>
+    {% if errors.location %}<p class="field-error">{{ errors.location }}</p>{% endif %}
+    <input type="hidden" name="latitude" id="latitude" value="{{ form.get('latitude', '') }}">
+    <input type="hidden" name="longitude" id="longitude" value="{{ form.get('longitude', '') }}">
+
+    <div class="field {% if errors.address %}has-error{% endif %}">
+      <label for="address">Address or area name</label>
+      <input id="address" name="address" type="text" value="{{ form.get('address', '') }}" placeholder="Filled in from the map. You can edit it.">
+      {% if errors.address %}<p class="field-error">{{ errors.address }}</p>{% endif %}
+    </div>
+    <div class="field">
+      <label for="landmark">Nearby landmark <span class="optional">(optional)</span></label>
+      <input id="landmark" name="landmark" type="text" value="{{ form.get('landmark', '') }}" placeholder="For example: near the school gate or beside the main road">
+    </div>
+  </fieldset>
+
+  <fieldset class="block">
+    <legend>Details</legend>
+    <div class="field {% if errors.description %}has-error{% endif %}">
+      <label for="description">Describe the problem or request</label>
+      <textarea id="description" name="description" rows="5" required>{{ form.get('description', '') }}</textarea>
+      {% if errors.description %}<p class="field-error">{{ errors.description }}</p>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="urgency">How urgent is it?</label>
+      <select id="urgency" name="urgency">
+        {% for key, label in urgency_levels.items() %}
+        <option value="{{ key }}" {% if form.get('urgency', 'normal') == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <p class="hint">For a major leak or burst pipe, keep clear of flooded or damaged areas and mention any immediate danger in the description.</p>
+    </div>
+
+    <div class="field {% if errors.photo %}has-error{% endif %}">
+      <label for="photo">Photo <span class="optional">(optional, up to 6 MB)</span></label>
+      <input id="photo" name="photo" type="file" accept="image/png,image/jpeg,image/webp">
+      {% if errors.photo %}<p class="field-error">{{ errors.photo }}</p>{% endif %}
+    </div>
+  </fieldset>
+
+  <div class="form-foot">
+    <p class="hint">The office will contact you on {{ g.user['phone'] }} if it needs more information.</p>
+    <button class="btn btn-primary" type="submit">Send water request</button>
+  </div>
+</form>
+
+<dialog id="mapDialog" aria-labelledby="mapTitle">
+  <div class="dialog-head">
+    <h2 id="mapTitle">Select the location</h2>
+    <button type="button" class="link-btn" id="cancelMap">Close</button>
+  </div>
+  <p class="dialog-help">Click the exact location of the pipe or affected area on the map. Zoom in for accuracy.</p>
+  <iframe id="mapFrame" title="OpenStreetMap, click to place a pin"></iframe>
+  <div class="dialog-foot">
+    <p id="pickedText" class="hint">Nothing selected yet.</p>
+    <button type="button" class="btn btn-primary" id="confirmMap" disabled>Confirm location</button>
+  </div>
+</dialog>
+
+<script>
+  window.MAP_URL = "{{ url_for('map_view') }}";
+</script>
+<script src="{{ url_for('static', filename='electricity.js') }}"></script>
 {% endblock %}
