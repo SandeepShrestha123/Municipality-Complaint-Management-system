@@ -69,8 +69,8 @@
     </div>
 
     <div class="field {% if errors.photo %}has-error{% endif %}">
-      <label for="photo">Photo <span class="optional">(optional, up to 6 MB)</span></label>
-      <input id="photo" name="photo" type="file" accept="image/png,image/jpeg,image/webp">
+      <label for="photo">Photo or video <span class="required">(required, up to 25 MB)</span></label>
+      <input id="photo" name="photo" type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime" required>
       {% if errors.photo %}<p class="field-error">{{ errors.photo }}</p>{% endif %}
     </div>
   </fieldset>

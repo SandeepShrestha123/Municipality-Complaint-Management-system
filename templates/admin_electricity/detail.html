@@ -1,0 +1,70 @@
+{% extends "admin_electricity/layout_admin.html" %}
+{% block title %}Request #{{ c['id'] }}{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('elec_admin.dashboard') }}">&larr; All electricity requests</a>
+<h1>Request #{{ c['id'] }} <span class="status">{{ c['status'] }}</span></h1>
+
+<section class="two-col">
+  <div>
+    <div class="block">
+      <h2>Problem</h2>
+      <p><strong>{{ type_labels.get(c['request_type'], c['request_type']) }}</strong>
+         &middot; {{ urgency_labels.get(c['urgency'], c['urgency']) }}</p>
+      <p>{{ c['description'] }}</p>
+      <p class="hint">Sent {{ c['created_at'].replace('T', ' ') }}</p>
+    </div>
+
+    <div class="block">
+      <h2>Citizen</h2>
+      <p>{{ c['full_name'] }} &middot; Ward {{ c['ward'] }}<br>
+         {{ c['phone'] }} &middot; {{ c['email'] }}<br>
+         Citizenship no. {{ c['citizenship_no'] }}</p>
+    </div>
+
+    <div class="block">
+      <h2>Location</h2>
+      <p>{{ c['address'] }}{% if c['landmark'] %} (near {{ c['landmark'] }}){% endif %}</p>
+      <iframe title="Map" src="{{ map_src }}" style="width:100%;height:260px;border:0"></iframe>
+      <p class="hint"><a href="https://www.openstreetmap.org/?mlat={{ c['latitude'] }}&mlon={{ c['longitude'] }}#map=18/{{ c['latitude'] }}/{{ c['longitude'] }}" target="_blank" rel="noopener">Open in OpenStreetMap</a></p>
+    </div>
+
+    {% if c['photo'] %}
+    <div class="block">
+      <h2>Photo / video</h2>
+      {% if c['photo'].lower().endswith(('.mp4','.webm','.mov')) %}
+      <video controls style="max-width:100%" src="{{ url_for('elec_admin.photo', filename=c['photo']) }}"></video>
+      {% else %}
+      <img src="{{ url_for('elec_admin.photo', filename=c['photo']) }}" alt="Photo of the problem" style="max-width:100%">
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <form class="block" method="post" enctype="multipart/form-data" action="{{ url_for('elec_admin.update_status', complaint_id=c['id']) }}">
+      <h2>Update status</h2>
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <div class="field"><label for="status">New status</label>
+        <select id="status" name="status">
+          {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s == c['status'] }}>{{ s }}</option>{% endfor %}
+        </select></div>
+      <div class="field"><label for="note">Note <span class="optional">(required if rejecting)</span></label>
+        <textarea id="note" name="note" rows="3"></textarea></div>
+      <div class="field"><label for="letter">Letter <span class="optional">(required for "Letter Issued"; PNG, JPG, WEBP or PDF)</span></label>
+        <input id="letter" name="letter" type="file" accept="image/png,image/jpeg,image/webp,application/pdf"></div>
+      <button class="btn btn-primary" type="submit">Save status</button>
+    </form>
+
+    <h2>History</h2>
+    {% if history %}
+    <ol class="steps">
+      {% for h in history %}
+      <li><strong>{{ h['status'] }}</strong> &middot; {{ h['changed_at'].replace('T', ' ') }}<br>
+          <span class="hint">by {{ h['admin_name'] }}{% if h['note'] %}: {{ h['note'] }}{% endif %}</span>
+          {% if h['letter_file'] %}<br><a href="{{ url_for('elec_admin.letter', filename=h['letter_file']) }}" target="_blank" rel="noopener">View letter</a>{% endif %}</li>
+      {% endfor %}
+    </ol>
+    {% else %}<p class="empty">No changes yet.</p>{% endif %}
+  </div>
+</section>
+{% endblock %}

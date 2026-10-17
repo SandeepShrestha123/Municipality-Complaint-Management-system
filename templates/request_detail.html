@@ -1,0 +1,44 @@
+{% extends "layout_app.html" %}
+{% block title %}Request #{{ c['id'] }}{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('dashboard') }}">&larr; Back to my requests</a>
+<h1>Request #{{ c['id'] }} <span class="status">{{ c['status'] }}</span></h1>
+
+<section class="two-col">
+  <div>
+    <div class="block">
+      <h2>Your request</h2>
+      <p><strong>{{ request_types.get(c['request_type'], c['request_type']) }}</strong>
+         &middot; {{ c['service']|capitalize }}</p>
+      <p>{{ c['description'] }}</p>
+      <p class="hint">Sent {{ c['created_at'].replace('T', ' ') }}</p>
+    </div>
+
+    <div class="block">
+      <h2>Location</h2>
+      <p>{{ c['address'] }}{% if c['landmark'] %} (near {{ c['landmark'] }}){% endif %}</p>
+    </div>
+  </div>
+
+  <div>
+    <h2>Progress</h2>
+    {% if history %}
+    <ol class="steps">
+      {% for h in history %}
+      <li><strong>{{ h['status'] }}</strong> &middot; {{ h['changed_at'].replace('T', ' ') }}
+        {% if h['note'] %}<br><span class="hint">{{ h['note'] }}</span>{% endif %}
+        {% if h['letter_file'] %}
+        <br>
+        <a href="{{ url_for('letter_file', filename=h['letter_file']) }}" target="_blank" rel="noopener">View letter</a>
+        &middot;
+        <a href="{{ url_for('letter_file', filename=h['letter_file'], download=1) }}">Download letter</a>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="empty">The municipal office has not updated this request yet.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

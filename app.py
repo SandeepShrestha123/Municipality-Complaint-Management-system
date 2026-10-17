@@ -6,8 +6,8 @@ from datetime import datetime
 from functools import wraps
 
 import folium
-from flask import (Flask, Response, flash, g, redirect, render_template,
-                   request, session, url_for)
+from flask import (Flask, Response, abort, flash, g, redirect, render_template,
+                   request, send_from_directory, session, url_for)
 from folium import Element
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -15,7 +15,7 @@ from werkzeug.utils import secure_filename
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "portal.db")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-ALLOWED_PHOTOS = {"png", "jpg", "jpeg", "webp"}
+ALLOWED_MEDIA = {"png", "jpg", "jpeg", "webp", "mp4", "webm", "mov"}
 
 # Default map centre (Kathmandu). Change to your municipality's centre.
 DEFAULT_CENTER = (27.7172, 85.3240)
@@ -44,7 +44,9 @@ URGENCY_LEVELS = {
 app = Flask(__name__)
 # Set a real secret in production:  export SECRET_KEY="long-random-string"
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-change-me")
-app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024  # 6 MB photo limit
+app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024  # 25 MB photo/video limit
+from admin_electricity import bp as elec_admin_bp, init_admin_schema
+app.register_blueprint(elec_admin_bp)
 
 
 # ----------------------------------------------------------------- database
@@ -99,12 +101,19 @@ def init_db():
 
 
 # --------------------------------------------------------------------- auth
+def is_admin(user):
+    return user is not None and "role" in user.keys() and user["role"] != "citizen"
+
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if "user_id" not in session:
             flash("Please log in to continue.", "error")
             return redirect(url_for("login"))
+        # Admins respond to requests; they must not see citizen pages.
+        if is_admin(g.user):
+            return redirect(url_for("elec_admin.dashboard"))
         return view(*args, **kwargs)
 
     return wrapped
@@ -124,13 +133,15 @@ def load_user():
 
 @app.route("/")
 def index():
+    if is_admin(g.user):
+        return redirect(url_for("elec_admin.dashboard"))
     return redirect(url_for("dashboard" if g.user else "login"))
 
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if g.user:
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("elec_admin.dashboard" if is_admin(g.user) else "dashboard"))
 
     errors = {}
     form = request.form
@@ -183,7 +194,7 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if g.user:
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("elec_admin.dashboard" if is_admin(g.user) else "dashboard"))
 
     error = None
     if request.method == "POST":
@@ -192,7 +203,12 @@ def login():
         user = get_db().execute(
             "SELECT * FROM users WHERE email = ?", (email,)
         ).fetchone()
-        if user and check_password_hash(user["password_hash"], password):
+        # Citizen login accepts citizens only. Admin accounts are rejected
+        # with the same message as a wrong password, so nobody can tell
+        # which emails belong to admins. Admins use /admin/electricity/login.
+        if (user
+                and not is_admin(user)
+                and check_password_hash(user["password_hash"], password)):
             session.clear()
             session["user_id"] = user["id"]
             return redirect(url_for("dashboard"))
@@ -267,10 +283,12 @@ def electricity():
 
         photo_name = None
         photo = request.files.get("photo")
-        if photo and photo.filename:
+        if not photo or not photo.filename:
+            errors["photo"] = "Attach a photo or video of the problem. It is required."
+        else:
             ext = photo.filename.rsplit(".", 1)[-1].lower()
-            if ext not in ALLOWED_PHOTOS:
-                errors["photo"] = "Upload a PNG, JPG or WEBP image."
+            if ext not in ALLOWED_MEDIA:
+                errors["photo"] = "Upload a PNG, JPG, WEBP image or an MP4, WEBM, MOV video."
             else:
                 photo_name = f"{uuid.uuid4().hex}_{secure_filename(photo.filename)}"
 
@@ -336,10 +354,12 @@ def water():
 
         photo_name = None
         photo = request.files.get("photo")
-        if photo and photo.filename:
+        if not photo or not photo.filename:
+            errors["photo"] = "Attach a photo or video of the problem. It is required."
+        else:
             ext = photo.filename.rsplit(".", 1)[-1].lower()
-            if ext not in ALLOWED_PHOTOS:
-                errors["photo"] = "Upload a PNG, JPG or WEBP image."
+            if ext not in ALLOWED_MEDIA:
+                errors["photo"] = "Upload a PNG, JPG, WEBP image or an MP4, WEBM, MOV video."
             else:
                 photo_name = f"{uuid.uuid4().hex}_{secure_filename(photo.filename)}"
 
@@ -368,6 +388,37 @@ def water():
         request_types=WATER_REQUEST_TYPES,
         urgency_levels=URGENCY_LEVELS,
     )
+
+
+# ------------------------------------------------------------ request detail
+@app.route("/request/<int:complaint_id>")
+@login_required
+def request_detail(complaint_id):
+    db = get_db()
+    c = db.execute("SELECT * FROM complaints WHERE id = ? AND user_id = ?",
+                   (complaint_id, g.user["id"])).fetchone()
+    if c is None:
+        abort(404)
+    history = db.execute(
+        "SELECT * FROM status_history WHERE complaint_id = ? ORDER BY id DESC",
+        (complaint_id,)).fetchall()
+    return render_template("request_detail.html", c=c, history=history,
+                           request_types={**REQUEST_TYPES, **WATER_REQUEST_TYPES})
+
+
+@app.route("/letter/<path:filename>")
+@login_required
+def letter_file(filename):
+    ok = get_db().execute(
+        "SELECT 1 FROM status_history h JOIN complaints c ON c.id = h.complaint_id"
+        " WHERE h.letter_file = ? AND c.user_id = ?",
+        (filename, g.user["id"])).fetchone()
+    if not ok:
+        abort(404)
+    # ?download=1 saves the file instead of opening it in the browser.
+    download = request.args.get("download") == "1"
+    return send_from_directory(UPLOAD_DIR, filename, as_attachment=download,
+                               download_name=filename.split("_", 2)[-1])
 
 
 # ---------------------------------------------------------------------- map
@@ -424,4 +475,5 @@ def map_view():
 
 if __name__ == "__main__":
     init_db()
+    init_admin_schema()
     app.run(debug=True)

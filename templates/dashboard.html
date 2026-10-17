@@ -49,7 +49,7 @@
         {% for c in complaints %}
           <tr>
             <td>{{ c['service']|capitalize }}</td>
-            <td>{{ request_types.get(c['request_type'], c['request_type']) }}</td>
+            <td><a href="{{ url_for('request_detail', complaint_id=c['id']) }}">{{ request_types.get(c['request_type'], c['request_type']) }}</a></td>
             <td>{{ c['address'] }}</td>
             <td>{{ c['created_at'][:10] }}</td>
             <td><span class="status">{{ c['status'] }}</span></td>

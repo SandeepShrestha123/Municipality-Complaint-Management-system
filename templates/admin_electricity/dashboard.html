@@ -1,0 +1,101 @@
+{% extends "admin_electricity/layout_admin.html" %}
+
+{% block title %}Electricity admin{% endblock %}
+
+{% block content %}
+
+<h1>Electricity requests</h1>
+
+<p class="lede">Pole requests sent by citizens. Dangerous and urgent ones are listed first.</p>
+
+
+
+<dl class="facts" style="margin:1.25rem 0">
+
+  {% for s in statuses %}
+
+  <div><dt>{{ s }}</dt><dd>{{ counts[s] }}</dd></div>
+
+  {% endfor %}
+
+</dl>
+
+
+
+<form method="get" class="row-2" style="margin-bottom:1rem; align-items:end">
+
+  <div class="field"><label for="status">Status</label>
+
+    <select id="status" name="status"><option value="">All</option>
+
+      {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s == f_status }}>{{ s }}</option>{% endfor %}
+
+    </select></div>
+
+  <div class="field"><label for="urgency">Urgency</label>
+
+    <select id="urgency" name="urgency"><option value="">All</option>
+
+      {% for k, v in urgency_labels.items() %}<option value="{{ k }}" {{ 'selected' if k == f_urgency }}>{{ v }}</option>{% endfor %}
+
+    </select></div>
+
+  <div class="field"><label for="ward">Ward</label>
+
+    <input id="ward" name="ward" type="number" min="1" max="35" value="{{ f_ward }}"></div>
+
+  <div class="field"><button class="btn btn-primary" type="submit">Filter</button>
+
+    <a class="btn btn-quiet" href="{{ url_for('elec_admin.dashboard') }}">Clear</a></div>
+
+</form>
+
+
+
+{% if rows %}
+
+<div class="table-wrap">
+
+  <table>
+
+    <thead><tr><th>#</th><th>Citizen</th><th>Ward</th><th>Issue</th><th>Urgency</th><th>Sent</th><th>Status</th><th></th></tr></thead>
+
+    <tbody>
+
+    {% for r in rows %}
+
+      <tr>
+
+        <td>{{ r['id'] }}</td>
+
+        <td>{{ r['full_name'] }}<br><span class="hint">{{ r['phone'] }}</span></td>
+
+        <td>{{ r['ward'] }}</td>
+
+        <td>{{ type_labels.get(r['request_type'], r['request_type']) }}</td>
+
+        <td>{{ urgency_labels.get(r['urgency'], r['urgency']) }}</td>
+
+        <td>{{ r['created_at'][:10] }}</td>
+
+        <td><span class="status">{{ r['status'] }}</span></td>
+
+        <td><a href="{{ url_for('elec_admin.detail', complaint_id=r['id']) }}">Open</a></td>
+
+      </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+{% else %}
+
+  <p class="empty">No electricity requests match.</p>
+
+{% endif %}
+
+{% endblock %}
